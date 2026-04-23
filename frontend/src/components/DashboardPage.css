@@ -1,0 +1,376 @@
+/* Dashboard Page Styles */
+
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #ffffff;
+  color: #000000;
+}
+
+.dashboard-page.dark {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
+/* Header */
+.dashboard-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+  padding: 24px 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header-content h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.user-info {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.dark-mode-toggle {
+  padding: 8px 12px;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.dark-mode-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Main */
+.dashboard-main {
+  flex: 1;
+  padding: 40px 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Create Section */
+.create-section {
+  margin-bottom: 40px;
+}
+
+.create-board-button {
+  padding: 16px 32px;
+  background-color: #667eea;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.create-board-button:hover {
+  background-color: #764ba2;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+}
+
+.create-form {
+  background-color: #f9f9f9;
+  padding: 24px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  max-width: 600px;
+}
+
+.dashboard-page.dark .create-form {
+  background-color: #2a2a2a;
+  border-color: #444;
+}
+
+.create-form input[type="text"],
+.create-form textarea {
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.dashboard-page.dark .create-form input[type="text"],
+.dashboard-page.dark .create-form textarea {
+  background-color: #3a3a3a;
+  border-color: #555;
+  color: #fff;
+}
+
+.create-form textarea {
+  resize: vertical;
+}
+
+.form-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.form-buttons button {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.form-buttons button[type="submit"] {
+  background-color: #667eea;
+  color: #ffffff;
+}
+
+.form-buttons button[type="submit"]:hover {
+  background-color: #764ba2;
+}
+
+.cancel-button {
+  background-color: #ddd;
+  color: #000;
+}
+
+.dashboard-page.dark .cancel-button {
+  background-color: #444;
+  color: #fff;
+}
+
+.cancel-button:hover {
+  background-color: #ccc;
+}
+
+.dashboard-page.dark .cancel-button:hover {
+  background-color: #555;
+}
+
+/* Boards Section */
+.boards-section h2 {
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.boards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+/* Board Card */
+.board-card {
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  transition: all 0.2s;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-page.dark .board-card {
+  background-color: #2a2a2a;
+  border-color: #444;
+}
+
+.board-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.board-header {
+  margin-bottom: 12px;
+}
+
+.board-header h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #666;
+}
+
+.dashboard-page.dark .board-meta {
+  color: #aaa;
+}
+
+.board-description {
+  margin: 0 0 16px 0;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.4;
+  flex: 1;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.dashboard-page.dark .board-description {
+  color: #aaa;
+}
+
+.board-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+.dashboard-page.dark .board-footer {
+  border-top-color: #444;
+}
+
+.board-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #999;
+}
+
+.dashboard-page.dark .board-dates {
+  color: #777;
+}
+
+.board-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.open-button {
+  padding: 8px 16px;
+  background-color: #667eea;
+  color: #ffffff;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.open-button:hover {
+  background-color: #764ba2;
+}
+
+.delete-button {
+  padding: 8px 12px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.dashboard-page.dark .delete-button {
+  background-color: #444;
+}
+
+.delete-button:hover {
+  background-color: #ffebee;
+  color: #d32f2f;
+}
+
+.dashboard-page.dark .delete-button:hover {
+  background-color: #5a3a3a;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+}
+
+.dashboard-page.dark .empty-state {
+  color: #666;
+}
+
+.empty-state p {
+  font-size: 18px;
+  margin: 0;
+}
+
+/* Footer */
+.dashboard-footer {
+  text-align: center;
+  padding: 20px;
+  background-color: #f5f5f5;
+  border-top: 1px solid #ddd;
+  font-size: 13px;
+  color: #666;
+  margin-top: auto;
+}
+
+.dashboard-page.dark .dashboard-footer {
+  background-color: #2a2a2a;
+  border-top-color: #444;
+  color: #aaa;
+}
+
+.dashboard-footer a {
+  color: #0066cc;
+  margin-left: 8px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+
+  .header-content h1 {
+    font-size: 24px;
+  }
+
+  .header-right {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .dashboard-main {
+    padding: 20px;
+  }
+
+  .boards-grid {
+    grid-template-columns: 1fr;
+  }
+}

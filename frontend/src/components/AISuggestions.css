@@ -1,0 +1,251 @@
+/* AI Suggestions Panel Styles */
+
+.ai-suggestions {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #f9f9f9;
+  color: #000;
+  font-size: 13px;
+  overflow: hidden;
+}
+
+.ai-suggestions.dark {
+  background-color: #2a2a2a;
+  color: #fff;
+}
+
+.suggestions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+  flex-shrink: 0;
+}
+
+.ai-suggestions.dark .suggestions-header {
+  border-bottom-color: #444;
+}
+
+.suggestions-header h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.close-button {
+  padding: 4px 8px;
+  background-color: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.close-button:hover {
+  background-color: #e0e0e0;
+}
+
+.ai-suggestions.dark .close-button:hover {
+  background-color: #444;
+}
+
+/* Tabs */
+.suggestions-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 12px;
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #ddd;
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.ai-suggestions.dark .suggestions-tabs {
+  background-color: #2a2a2a;
+  border-bottom-color: #444;
+}
+
+.tab {
+  padding: 10px 12px;
+  background-color: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-weight: 500;
+  color: #666;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.ai-suggestions.dark .tab {
+  color: #aaa;
+}
+
+.tab:hover {
+  color: #000;
+  border-bottom-color: #ddd;
+}
+
+.ai-suggestions.dark .tab:hover {
+  color: #fff;
+  border-bottom-color: #666;
+}
+
+.tab.active {
+  color: #0066cc;
+  border-bottom-color: #0066cc;
+}
+
+/* Refresh Button */
+.refresh-button {
+  padding: 8px 12px;
+  margin: 8px 12px;
+  background-color: #0066cc;
+  color: #fff;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background-color: #0052a3;
+}
+
+.refresh-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Content */
+.suggestions-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.suggestion-item {
+  padding: 12px;
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.ai-suggestions.dark .suggestion-item {
+  background-color: #3a3a3a;
+  border-color: #555;
+}
+
+.suggestion-item h3 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.suggestion-item p {
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+}
+
+.suggestion-item ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.suggestion-item li {
+  margin: 4px 0;
+  line-height: 1.4;
+}
+
+.suggestion-item.concerns {
+  border-color: #ff9800;
+  background-color: #fff3e0;
+}
+
+.ai-suggestions.dark .suggestion-item.concerns {
+  background-color: #4a3200;
+  border-color: #ff9800;
+}
+
+/* Issues */
+.issue {
+  padding: 6px 8px;
+  border-radius: 3px;
+  margin: 4px 0;
+  font-size: 12px;
+  background-color: #f0f0f0;
+}
+
+.ai-suggestions.dark .issue {
+  background-color: #4a4a4a;
+}
+
+.issue.high {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.ai-suggestions.dark .issue.high {
+  background-color: #4a2828;
+}
+
+.issue.medium {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+.ai-suggestions.dark .issue.medium {
+  background-color: #4a3200;
+}
+
+/* Suggestion Action */
+.suggestion-action {
+  padding: 8px;
+  background-color: #f0f0f0;
+  border-radius: 3px;
+  margin: 8px 0;
+}
+
+.ai-suggestions.dark .suggestion-action {
+  background-color: #4a4a4a;
+}
+
+.apply-button {
+  padding: 6px 12px;
+  background-color: #4caf50;
+  color: #fff;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 8px;
+}
+
+.apply-button:hover {
+  background-color: #45a049;
+}
+
+/* No Suggestions */
+.no-suggestions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #999;
+  text-align: center;
+  padding: 20px;
+}
+
+.ai-suggestions.dark .no-suggestions {
+  color: #666;
+}
