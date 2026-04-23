@@ -142,32 +142,29 @@ export const handleSocketConnection = (socket, io) => {
       const { boardId, boardData, userId } = payload;
       const roomKey = `board_${boardId}`;
 
-      // Update board in database
-      const board = await Board.findOneAndUpdate(
-        { id: boardId },
-        {
-          data: boardData,
-          updatedAt: new Date(),
-          currentVersion: board?.currentVersion + 1 || 1
-        },
-        { new: true }
-      );
+      const board = await Board.findOne({ id: boardId });
+      if (!board) {
+        socket.emit('error', { message: 'Board not found' });
+        return;
+      }
+
+      board.data = boardData;
+      board.updatedAt = new Date();
+      board.currentVersion = (board.currentVersion || 0) + 1;
 
       // Add to version history
-      if (board) {
-        board.versions.push({
-          versionNumber: board.currentVersion,
-          data: boardData,
-          userId,
-          changeDescription: 'Auto-save'
-        });
-        await board.save();
-      }
+      board.versions.push({
+        versionNumber: board.currentVersion,
+        data: boardData,
+        userId,
+        changeDescription: 'Auto-save'
+      });
+      await board.save();
 
       // Notify all users
       io.to(roomKey).emit('board-saved', {
         timestamp: new Date(),
-        version: board?.currentVersion
+        version: board.currentVersion
       });
 
       console.log(`💾 Board ${boardId} saved`);

@@ -105,7 +105,8 @@ export const useStore = create((set, get) => ({
   // Canvas manipulation actions
   addObject: (object) => {
     const state = get();
-    const newObjects = [...state.boardData.objects, { id: uuidv4(), ...object }];
+    const savedObject = { id: object.id || uuidv4(), ...object };
+    const newObjects = [...state.boardData.objects, savedObject];
     set({
       boardData: {
         ...state.boardData,
@@ -113,6 +114,7 @@ export const useStore = create((set, get) => ({
       }
     });
     get().pushHistory();
+    return savedObject;
   },
 
   updateObject: (objectId, updates) => {
@@ -126,6 +128,7 @@ export const useStore = create((set, get) => ({
         objects: newObjects
       }
     });
+    get().pushHistory();
   },
 
   deleteObject: (objectId) => {

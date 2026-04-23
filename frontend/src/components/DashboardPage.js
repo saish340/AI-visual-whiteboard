@@ -29,7 +29,7 @@ const DashboardPage = ({ isDarkMode, toggleDarkMode }) => {
       }
     } catch (error) {
       console.error('Error loading boards:', error);
-      store.setError('Failed to load boards');
+      store.setError(null);
     } finally {
       setLoading(false);
     }
@@ -47,7 +47,14 @@ const DashboardPage = ({ isDarkMode, toggleDarkMode }) => {
       }
     } catch (error) {
       console.error('Error creating board:', error);
-      store.setError('Failed to create board');
+      const localBoardId = `local-${Date.now()}`;
+      store.setBoardId(localBoardId);
+      store.setBoardName(formData.name || 'Local Draft Board');
+      store.setBoardData({ objects: [], connections: [] });
+      store.setError(null);
+      setFormData({ name: '', description: '' });
+      setShowCreateForm(false);
+      navigate(`/board/${localBoardId}`);
     }
   };
 

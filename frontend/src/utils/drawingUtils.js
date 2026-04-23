@@ -98,7 +98,9 @@ export const snapToGrid = (point, gridSize = 20) => {
  */
 export const exportCanvasToPNG = (canvas, fileName = 'whiteboard.png') => {
   const link = document.createElement('a');
-  link.href = canvas.toDataURL('image/png');
+  link.href = canvas.getElement
+    ? canvas.toDataURL({ format: 'png', multiplier: 1 })
+    : canvas.toDataURL('image/png');
   link.download = fileName;
   document.body.appendChild(link);
   link.click();

@@ -47,30 +47,6 @@ router.post('/create', async (req, res) => {
 });
 
 /**
- * Get board by ID
- * GET /api/boards/:id
- */
-router.get('/:id', async (req, res) => {
-  try {
-    const board = await Board.findOne({ id: req.params.id });
-
-    if (!board) {
-      throw new APIError('Board not found', 404);
-    }
-
-    res.json({
-      success: true,
-      data: board
-    });
-  } catch (error) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-/**
  * Get all boards for a user
  * GET /api/boards/user/:userId
  */
@@ -89,6 +65,30 @@ router.get('/user/:userId', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Get board by ID
+ * GET /api/boards/:id
+ */
+router.get('/:id', async (req, res) => {
+  try {
+    const board = await Board.findOne({ id: req.params.id });
+
+    if (!board) {
+      throw new APIError('Board not found', 404);
+    }
+
+    res.json({
+      success: true,
+      data: board
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
       success: false,
       error: error.message
     });

@@ -42,7 +42,10 @@ const WhiteboardPage = ({ isDarkMode, toggleDarkMode }) => {
         setIsLoading(false);
       } catch (error) {
         console.error('Error loading board:', error);
-        store.setError('Failed to load board');
+        store.setBoardId(boardId || `local-${Date.now()}`);
+        store.setBoardName('Local Draft Board');
+        store.setBoardData({ objects: [], connections: [] });
+        store.setError(null);
         setIsLoading(false);
       }
     };

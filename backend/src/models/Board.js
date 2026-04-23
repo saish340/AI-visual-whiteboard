@@ -28,6 +28,18 @@ const boardSchema = new mongoose.Schema({
       fill: String,
       stroke: String,
       strokeWidth: Number,
+      strokeLineCap: String,
+      strokeLineJoin: String,
+      path: mongoose.Schema.Types.Mixed,
+      left: Number,
+      top: Number,
+      scaleX: Number,
+      scaleY: Number,
+      pathOffset: mongoose.Schema.Types.Mixed,
+      points: [{
+        x: Number,
+        y: Number
+      }],
       text: String,
       fontFamily: String,
       fontSize: Number,

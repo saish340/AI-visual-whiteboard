@@ -269,6 +269,38 @@
   text-align: center;
 }
 
+/* Actions Section */
+.action-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.action-button {
+  padding: 7px 8px;
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.toolbar.dark .action-button {
+  background-color: #3a3a3a;
+  border-color: #555;
+  color: #fff;
+}
+
+.action-button:hover {
+  background-color: #e8e8e8;
+  border-color: #999;
+}
+
+.toolbar.dark .action-button:hover {
+  background-color: #4a4a4a;
+}
+
 /* History Section */
 .history-controls {
   display: flex;

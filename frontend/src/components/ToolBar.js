@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
-import { emitUpdateObject } from '../services/socketService';
-import { FiChevronDown, FiX } from 'react-icons/fi';
+import { exportCanvasToPNG } from '../utils/drawingUtils';
 import './ToolBar.css';
 
 /**
@@ -30,13 +29,33 @@ const ToolBar = () => {
   const strokeWidths = [1, 2, 4, 6, 8, 10];
 
   // Handle tool selection
-  const handleSelectTool = (toolId) => {
+  const handleSelectTool = useCallback((toolId) => {
     store.setSelectedTool(toolId);
-  };
+  }, [store]);
 
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e) => {
+      const target = e.target;
+      const isEditingText = target?.tagName === 'INPUT' ||
+        target?.tagName === 'TEXTAREA' ||
+        target?.tagName === 'SELECT' ||
+        target?.isContentEditable;
+
+      if (isEditingText) return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        store.undo();
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        store.redo();
+        return;
+      }
+
       const toolMap = {
         'p': 'pen',
         'r': 'rectangle',
@@ -55,7 +74,17 @@ const ToolBar = () => {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, []);
+  }, [handleSelectTool, store]);
+
+  const handleExportPNG = () => {
+    const canvas = window.__whiteboardFabricCanvas;
+    if (!canvas) {
+      store.setError('Canvas is not ready yet');
+      return;
+    }
+
+    exportCanvasToPNG(canvas, `${store.boardName || 'whiteboard'}.png`);
+  };
 
   return (
     <div className={`toolbar ${store.isDarkMode ? 'dark' : ''}`}>
@@ -170,6 +199,27 @@ const ToolBar = () => {
             title="Reset zoom"
           >
             Reset
+          </button>
+        </div>
+      </div>
+
+      {/* Smart Actions */}
+      <div className="toolbar-section actions-section">
+        <div className="toolbar-label">Actions</div>
+        <div className="action-buttons">
+          <button
+            className="action-button"
+            onClick={() => store.setShowAISuggestions(true)}
+            title="Open AI suggestions"
+          >
+            AI
+          </button>
+          <button
+            className="action-button"
+            onClick={handleExportPNG}
+            title="Export board as PNG"
+          >
+            PNG
           </button>
         </div>
       </div>

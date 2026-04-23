@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
+import { emitUpdateObject } from '../services/socketService';
 import { FiX } from 'react-icons/fi';
 import './ContextPanel.css';
 
@@ -15,19 +16,29 @@ const ContextPanel = ({ objectId }) => {
 
   // Get selected object
   const object = store.boardData.objects.find(obj => obj.id === objectId);
+  const metadata = object?.metadata || {};
+
+  useEffect(() => {
+    setNotes(metadata.notes || '');
+    setCode(metadata.code || '');
+    setLinks(metadata.links || []);
+  }, [objectId, metadata.notes, metadata.code, metadata.links]);
 
   if (!object) {
     return null;
   }
 
-  const metadata = object.metadata || {};
-
   const handleSaveMetadata = () => {
-    store.updateMetadata(objectId, {
+    const nextMetadata = {
       notes,
       code,
       links
-    });
+    };
+
+    store.updateMetadata(objectId, nextMetadata);
+    if (store.boardId) {
+      emitUpdateObject(store.boardId, objectId, { metadata: nextMetadata });
+    }
   };
 
   const addLink = () => {
