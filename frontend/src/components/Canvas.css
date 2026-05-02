@@ -1,6 +1,6 @@
 /* Canvas Styles */
 
-.canvas-container {
+.whiteboard-canvas-host {
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -9,19 +9,24 @@
   touch-action: none;
 }
 
-.canvas-container.dark {
+.whiteboard-canvas-host.dark {
   background-color: #1a1a1a;
 }
 
-.drawing-canvas {
-  display: block;
-  cursor: crosshair;
-  background-color: #ffffff;
+.whiteboard-canvas-host .canvas-container {
   box-shadow: inset 0 0 0 1px #ddd;
   touch-action: none;
 }
 
-.drawing-canvas.dark {
-  background-color: #1a1a1a;
+.whiteboard-canvas-host.dark .canvas-container {
   box-shadow: inset 0 0 0 1px #444;
+}
+
+.whiteboard-canvas-host canvas {
+  display: block;
+  touch-action: none;
+}
+
+.whiteboard-canvas-host .upper-canvas {
+  background: transparent !important;
 }

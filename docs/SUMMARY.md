@@ -46,7 +46,7 @@ A production-ready **AI-Powered Visual Whiteboard** application with real-time c
 #### Features
 - ✅ Real-time collaborative drawing
 - ✅ Smart layout cleanup and auto-alignment
-- ✅ AI architecture suggestions (with OpenAI integration)
+- ✅ AI architecture suggestions (with Gemini integration)
 - ✅ Context layer with metadata (notes, code, links)
 - ✅ Zoom and pan controls
 - ✅ Keyboard shortcuts
@@ -99,7 +99,7 @@ ai-visual-whiteboard/
 ## Tech Stack
 
 - **Frontend**: React (hooks, functional components), Zustand, Socket.io-client, Fabric.js, Tailwind CSS
-- **Backend**: Node.js, Express, Socket.io, MongoDB, OpenAI API
+- **Backend**: Node.js, Express, Socket.io, MongoDB, Gemini API
 - **Database**: MongoDB (with TTL indexes)
 - **Real-time**: WebSockets (Socket.io)
 - **State**: Zustand (client), Express session management (server)

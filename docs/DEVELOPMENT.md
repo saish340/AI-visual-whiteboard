@@ -106,17 +106,11 @@ const tools = [
 export async function generateDiagramCode(boardData) {
   try {
     const prompt = `Generate PlantUML code for: ${JSON.stringify(boardData)}`;
-    const response = await openai.createChatCompletion({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a diagram expert. Generate code.'
-        },
-        { role: 'user', content: prompt }
-      ]
-    });
-    return response.data.choices[0].message.content;
+    const response = await geminiModel.generateContent([
+      'You are a diagram expert. Generate code.',
+      prompt
+    ]);
+    return response.response.text();
   } catch (error) {
     console.error('Error:', error);
     throw error;
@@ -489,7 +483,8 @@ MONGODB_URI=mongodb://localhost:27017/whiteboard
 PORT=5000
 NODE_ENV=development
 CLIENT_URL=http://localhost:3000
-OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=your-gemini-api-key-here
+GEMINI_MODEL=gemini-1.5-flash
 LOG_LEVEL=debug  # Optional
 ```
 

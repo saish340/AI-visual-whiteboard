@@ -61,7 +61,7 @@ The AI-Powered Visual Whiteboard is built with a modular, scalable architecture 
 │  │            Business Logic Services                  │    │
 │  │  ┌──────────────┬──────────────┬────────────────┐  │    │
 │  │  │ Socket       │ AI Service   │ Layout Engine  │  │    │
-│  │  │ Service      │ (OpenAI)     │ (Auto cleanup) │  │    │
+│  │  │ Service      │ (Gemini)     │ (Auto cleanup) │  │    │
 │  │  └──────────────┴──────────────┴────────────────┘  │    │
 │  └────────────────────────────────────────────────────┘    │
 │         ↓              ↓                  ↓                 │
@@ -211,7 +211,7 @@ Trigger auto-save
   - **Hierarchical layout** for flowcharts
   - **Force-directed layout** for networks
   - **Grid layout** for generic diagrams
-- Architecture analysis via OpenAI GPT-3.5-turbo
+- Architecture analysis via Gemini
 - API recommendations
 
 #### **Routes**
@@ -287,7 +287,7 @@ Trigger auto-save
 3. **Input Validation**: Sanitize all API inputs
 4. **Rate Limiting**: Can be added at Express middleware level
 5. **CORS**: Configured for frontend URL
-6. **Secrets Management**: OpenAI key in environment variables
+6. **Secrets Management**: Gemini key in environment variables
 
 ## Scalability Path
 

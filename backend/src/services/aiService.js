@@ -1,14 +1,21 @@
 /**
- * AI Service - Integrates with OpenAI for smart suggestions
+ * AI Service - Integrates with Gemini for smart suggestions
  * Handles: board analysis, layout suggestions, architecture recommendations
  */
-import { Configuration, OpenAIApi } from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const openai = new OpenAIApi(
-  new Configuration({
-    apiKey: process.env.OPENAI_API_KEY
-  })
-);
+const gemini = process.env.GEMINI_API_KEY
+  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+  : null;
+
+const getGeminiModel = () => gemini?.getGenerativeModel({
+  model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+  generationConfig: {
+    temperature: 0.7,
+    maxOutputTokens: 1200,
+    responseMimeType: 'application/json'
+  }
+});
 
 /**
  * Analyze a whiteboard diagram for architectural insights
@@ -26,12 +33,13 @@ export async function analyzeBoard(boardData) {
     // Extract diagram structure
     const diagram = extractDiagramStructure(boardData);
 
-    // If no OpenAI key, return basic analysis
-    if (!process.env.OPENAI_API_KEY) {
+    // If no Gemini key, return basic analysis
+    const model = getGeminiModel();
+    if (!model) {
       return generateLocalAnalysis(diagram);
     }
 
-    // Use OpenAI for detailed analysis
+    // Use Gemini for detailed analysis
     const prompt = `
 Analyze this system architecture diagram:
 - Components: ${JSON.stringify(diagram.components)}
@@ -46,23 +54,12 @@ Provide:
 Format as JSON with keys: summary, patterns, improvements, scalabilityConcerns
     `;
 
-    const response = await openai.createChatCompletion({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert system architect. Analyze diagrams and provide actionable insights.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 1000
-    });
+    const response = await model.generateContent([
+      'You are an expert system architect. Analyze diagrams and provide actionable insights.',
+      prompt
+    ]);
 
-    const analysisText = response.data.choices[0].message.content;
+    const analysisText = response.response.text();
     const analysis = parseAIResponse(analysisText);
 
     return {
@@ -136,7 +133,8 @@ export async function generateApiSuggestions(boardData) {
       .filter(obj => obj.type === 'rect' && obj.text)
       .map(obj => obj.text);
 
-    if (!process.env.OPENAI_API_KEY) {
+    const model = getGeminiModel();
+    if (!model) {
       return generateLocalApiSuggestions(components);
     }
 
@@ -153,23 +151,12 @@ Format as JSON with keys: apis, messageQueues, dataLayers, security
 Each with 'name' and 'reasoning' fields.
     `;
 
-    const response = await openai.createChatCompletion({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a system architect expert. Suggest technologies and APIs for the given system architecture.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 1200
-    });
+    const response = await model.generateContent([
+      'You are a system architect expert. Suggest technologies and APIs for the given system architecture.',
+      prompt
+    ]);
 
-    const suggestions = parseAIResponse(response.data.choices[0].message.content);
+    const suggestions = parseAIResponse(response.response.text());
 
     return {
       components,

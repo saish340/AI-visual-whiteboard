@@ -43,6 +43,7 @@ const Canvas = () => {
       height: size.height,
       backgroundColor: initialState.isDarkMode ? '#1e1e1e' : '#ffffff',
       isDrawingMode: initialState.selectedTool === TOOLS.PEN,
+      renderOnAddRemove: true,
       selection: false,
       preserveObjectStacking: true
     });
@@ -264,11 +265,18 @@ const Canvas = () => {
         fill: 'transparent'
       };
 
-      canvas.remove(path);
       const savedObject = current.addObject(pathObj);
+      path.set({
+        selectable: false,
+        evented: false,
+        data: { objectId: savedObject.id, type: savedObject.type }
+      });
+
       if (current.boardId) {
         emitDraw(current.boardId, savedObject);
       }
+
+      canvas.requestRenderAll();
     };
 
     const handleObjectModified = (evt) => {
@@ -416,12 +424,9 @@ const Canvas = () => {
   return (
     <div
       ref={containerRef}
-      className={`canvas-container ${isDarkMode ? 'dark' : ''}`}
+      className={`whiteboard-canvas-host ${isDarkMode ? 'dark' : ''}`}
     >
-      <canvas
-        ref={canvasRef}
-        className={`drawing-canvas ${isDarkMode ? 'dark' : ''}`}
-      />
+      <canvas ref={canvasRef} />
     </div>
   );
 };
@@ -446,10 +451,14 @@ const applyToolSettings = (canvas, store) => {
   canvas.defaultCursor = isSelect ? 'default' : isEraser ? 'not-allowed' : isText ? 'text' : 'crosshair';
   canvas.hoverCursor = isSelect ? 'move' : isEraser ? 'not-allowed' : 'crosshair';
 
-  if (canvas.freeDrawingBrush) {
-    canvas.freeDrawingBrush.color = store.selectedColor;
-    canvas.freeDrawingBrush.width = store.selectedStrokeWidth;
+  if (!canvas.freeDrawingBrush || !(canvas.freeDrawingBrush instanceof fabric.PencilBrush)) {
+    canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
   }
+
+  canvas.freeDrawingBrush.color = store.selectedColor || '#000000';
+  canvas.freeDrawingBrush.width = Math.max(1, Number(store.selectedStrokeWidth) || 1);
+  canvas.freeDrawingBrush.strokeLineCap = 'round';
+  canvas.freeDrawingBrush.strokeLineJoin = 'round';
 
   canvas.getObjects().forEach((object) => {
     object.selectable = isSelect;

@@ -2,12 +2,12 @@
 
 ## Prerequisites
 
-- **Node.js**: v16+ ([Download](https://nodejs.org/))
+- **Node.js**: v18+ ([Download](https://nodejs.org/))
 - **MongoDB**: v4.4+ 
   - Local: [Download](https://www.mongodb.com/try/download/community)
   - Cloud: [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) (Free tier available)
 - **Git**: For version control
-- **OpenAI API Key** (Optional): For AI features
+- **Gemini API Key** (Optional): For AI features
 - **npm** or **yarn**: Package managers
 
 ## Environment Setup
@@ -48,8 +48,9 @@ NODE_ENV=development
 # Client URL (for CORS)
 CLIENT_URL=http://localhost:3000
 
-# OpenAI (Optional, for AI features)
-OPENAI_API_KEY=sk-...your-key-here...
+# Gemini (Optional, for AI features)
+GEMINI_API_KEY=your-gemini-api-key-here
+GEMINI_MODEL=gemini-1.5-flash
 ```
 
 #### Start Backend Server
@@ -275,7 +276,8 @@ MONGODB_URI=mongodb+srv://prod_user:prod_pass@prod-cluster.mongodb.net/whiteboar
 PORT=5000
 NODE_ENV=production
 CLIENT_URL=https://your-domain.com
-OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=your-gemini-api-key-here
+GEMINI_MODEL=gemini-1.5-flash
 ```
 
 2. Set up SSL/TLS certificate
@@ -301,7 +303,7 @@ heroku addons:create mongolab:sandbox
 
 # Set environment variables
 heroku config:set NODE_ENV=production
-heroku config:set OPENAI_API_KEY=sk-...
+heroku config:set GEMINI_API_KEY=your-gemini-api-key-here
 
 # Deploy
 git push heroku main
@@ -376,7 +378,7 @@ node --max-old-space-size=2048 src/index.js
 1. ✅ Application is running locally
 2. 📝 Create your first board
 3. 🎨 Explore drawing tools
-4. 🤖 Test AI suggestions (with OpenAI key)
+4. 🤖 Test AI suggestions (with Gemini key)
 5. 👥 Invite collaborators and test real-time sync
 6. 🚀 Deploy to production when ready
 

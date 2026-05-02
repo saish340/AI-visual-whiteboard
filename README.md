@@ -5,10 +5,10 @@ A production-ready collaborative whiteboard application with real-time synchroni
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 16+ 
+- Node.js 18+
 - MongoDB (local or Atlas)
 - npm or yarn
-- OpenAI API key (optional, for AI features)
+- Gemini API key (optional, for AI features)
 
 ### Setup
 
@@ -29,7 +29,8 @@ npm install
 MONGODB_URI=mongodb://localhost:27017/whiteboard
 PORT=5000
 NODE_ENV=development
-OPENAI_API_KEY=your_key_here
+GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-1.5-flash
 
 # Frontend/.env
 REACT_APP_API_URL=http://localhost:5000
@@ -106,7 +107,7 @@ See [ARCHITECTURE.md](./docs/ARCHITECTURE.md) for detailed system design and dat
 ## 🔑 Key Technologies
 
 - **Frontend**: React, Fabric.js, Zustand, Socket.io-client
-- **Backend**: Express, Socket.io, MongoDB, OpenAI API
+- **Backend**: Express, Socket.io, MongoDB, Gemini API
 - **DevOps**: Docker (optional), nginx
 
 ## 📦 Deployment
