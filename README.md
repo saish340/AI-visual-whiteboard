@@ -114,7 +114,3 @@ See [ARCHITECTURE.md](./docs/ARCHITECTURE.md) for detailed system design and dat
 
 Ready for deployment to Heroku, AWS, DigitalOcean, etc.
 See [DEPLOYMENT.md](./docs/DEPLOYMENT.md) for instructions.
-
-## 📝 License
-
-MIT

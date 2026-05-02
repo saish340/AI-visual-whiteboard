@@ -34,6 +34,9 @@ const AISuggestions = () => {
       } else if (activeTab === 'apis') {
         const response = await aiApi.getApiSuggestions(store.boardData);
         setSuggestions(response.data);
+      } else if (activeTab === 'enhance') {
+        const response = await aiApi.getBoardPatch(store.boardData);
+        setSuggestions(response.data);
       }
     } catch (error) {
       store.setError('Failed to fetch suggestions: ' + error.message);
@@ -88,6 +91,12 @@ const AISuggestions = () => {
           onClick={() => setActiveTab('apis')}
         >
           APIs
+        </button>
+        <button
+          className={`tab ${activeTab === 'enhance' ? 'active' : ''}`}
+          onClick={() => setActiveTab('enhance')}
+        >
+          Enhance
         </button>
       </div>
 
@@ -245,6 +254,39 @@ const AISuggestions = () => {
                 </p>
               </div>
             )}
+          </div>
+        )}
+
+        {!loading && suggestions && activeTab === 'enhance' && (
+          <div className="architecture-suggestions">
+            {suggestions.addComponents && suggestions.addComponents.length > 0 && (
+              <div className="suggestion-item">
+                <h3>Auto-added Components</h3>
+                <ul>
+                  {suggestions.addComponents.map((component, idx) => (
+                    <li key={idx}>{component.label || component.kind}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {suggestions.highlightIssues && suggestions.highlightIssues.length > 0 && (
+              <div className="suggestion-item concerns">
+                <h3>Issues</h3>
+                <ul>
+                  {suggestions.highlightIssues.map((issue, idx) => (
+                    <li key={idx}>{issue.message}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <button
+              className="apply-button"
+              onClick={() => store.applyBoardPatch(suggestions)}
+            >
+              Apply Enhancements
+            </button>
           </div>
         )}
 

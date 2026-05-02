@@ -92,7 +92,8 @@ const Canvas = () => {
           fill: current.selectedColor,
           stroke: current.selectedColor,
           fontSize: current.selectedFontSize,
-          fontFamily: 'Inter, Arial, sans-serif'
+          fontFamily: 'Inter, Arial, sans-serif',
+          kind: 'annotation'
         });
 
         current.setSelectedObject(savedObject.id);
@@ -214,14 +215,17 @@ const Canvas = () => {
           strokeWidth: current.selectedStrokeWidth
         };
       } else if (current.selectedTool === TOOLS.ARROW) {
+        const semanticArrow = resolveArrowSemantics(start, pointer, current.boardData.objects);
         newObj = {
           type: SHAPES.ARROW,
           points: [
-            { x: start.x, y: start.y },
-            { x: pointer.x, y: pointer.y }
+            semanticArrow.start,
+            semanticArrow.end
           ],
           stroke: current.selectedColor,
           strokeWidth: current.selectedStrokeWidth
+          ,
+          ...semanticArrow.semantic
         };
       }
 
@@ -524,6 +528,91 @@ const getObjectUpdates = (object) => {
   }
 
   return null;
+};
+
+const resolveArrowSemantics = (start, end, objects) => {
+  const startTarget = findNearestComponentPoint(start, objects);
+  const endTarget = findNearestComponentPoint(end, objects);
+  const semantic = {
+    sourceId: startTarget?.id || null,
+    targetId: endTarget?.id || null,
+    sourcePortId: startTarget?.portId || null,
+    targetPortId: endTarget?.portId || null,
+    connectionType: inferConnectionTypeFromLabels(startTarget?.label, endTarget?.label),
+    label: inferArrowLabel(startTarget?.label, endTarget?.label)
+  };
+
+  return {
+    start: startTarget?.point || start,
+    end: endTarget?.point || end,
+    semantic
+  };
+};
+
+const findNearestComponentPoint = (point, objects) => {
+  const shapes = objects.filter((object) => object.type !== SHAPES.LINE && object.type !== SHAPES.ARROW && object.type !== SHAPES.TEXT);
+
+  let best = null;
+  shapes.forEach((object) => {
+    const bounds = {
+      x: Number.isFinite(object.x) ? object.x : 0,
+      y: Number.isFinite(object.y) ? object.y : 0,
+      width: Number.isFinite(object.width) ? object.width : 0,
+      height: Number.isFinite(object.height) ? object.height : 0
+    };
+
+    const center = {
+      x: bounds.x + bounds.width / 2,
+      y: bounds.y + bounds.height / 2
+    };
+
+    const distance = Math.sqrt((center.x - point.x) ** 2 + (center.y - point.y) ** 2);
+    if (!best || distance < best.distance) {
+      best = {
+        id: object.id,
+        label: object.text || object.kind || object.type,
+        distance,
+        point: snapPointToBounds(point, bounds, center),
+        portId: null
+      };
+    }
+  });
+
+  return best;
+};
+
+const snapPointToBounds = (point, bounds, center) => {
+  const left = { x: bounds.x, y: Math.min(Math.max(point.y, bounds.y), bounds.y + bounds.height) };
+  const right = { x: bounds.x + bounds.width, y: Math.min(Math.max(point.y, bounds.y), bounds.y + bounds.height) };
+  const top = { x: Math.min(Math.max(point.x, bounds.x), bounds.x + bounds.width), y: bounds.y };
+  const bottom = { x: Math.min(Math.max(point.x, bounds.x), bounds.x + bounds.width), y: bounds.y + bounds.height };
+  const options = [left, right, top, bottom];
+
+  return options.reduce((best, candidate) => {
+    const distance = Math.sqrt((candidate.x - point.x) ** 2 + (candidate.y - point.y) ** 2);
+    if (!best || distance < best.distance) {
+      return { ...candidate, distance };
+    }
+    return best;
+  }, { ...center, distance: Infinity });
+};
+
+const inferConnectionTypeFromLabels = (sourceLabel = '', targetLabel = '') => {
+  const label = `${sourceLabel} ${targetLabel}`.toLowerCase();
+  if (label.includes('auth') || label.includes('login')) return 'auth';
+  if (label.includes('db') || label.includes('database')) return 'db';
+  if (label.includes('queue') || label.includes('event') || label.includes('kafka')) return 'async';
+  if (label.includes('api') || label.includes('get') || label.includes('post')) return 'api';
+  return 'relation';
+};
+
+const inferArrowLabel = (sourceLabel = '', targetLabel = '') => {
+  const label = `${sourceLabel} ${targetLabel}`.toLowerCase();
+  if (label.includes('auth')) return 'Auth flow';
+  if (label.includes('db')) return 'DB write';
+  if (label.includes('queue') || label.includes('event')) return 'Async event';
+  if (label.includes('api')) return 'API call';
+  return '';
 };
 
 const hasDrawableSize = (object) => {

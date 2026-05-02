@@ -20,6 +20,7 @@ const boardSchema = new mongoose.Schema({
     objects: [{
       id: String,
       type: String,
+      kind: String,
       x: Number,
       y: Number,
       width: Number,
@@ -43,6 +44,15 @@ const boardSchema = new mongoose.Schema({
       text: String,
       fontFamily: String,
       fontSize: Number,
+      label: String,
+      sourceId: String,
+      targetId: String,
+      sourcePortId: String,
+      targetPortId: String,
+      connectionType: String,
+      routing: String,
+      rev: Number,
+      updatedAt: Date,
       metadata: {
         notes: String,
         code: String,
@@ -51,10 +61,19 @@ const boardSchema = new mongoose.Schema({
       }
     }],
     connections: [{
+      id: String,
+      sourceId: String,
+      targetId: String,
+      sourcePortId: String,
+      targetPortId: String,
       fromId: String,
       toId: String,
       type: String,
-      label: String
+      label: String,
+      points: [mongoose.Schema.Types.Mixed],
+      routing: String,
+      rev: Number,
+      updatedAt: Date
     }]
   },
   // Collaboration features

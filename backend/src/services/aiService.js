@@ -117,6 +117,87 @@ export async function suggestLayout(boardData) {
 }
 
 /**
+ * Generate board patches that add missing architecture components and cleanup actions
+ */
+export async function generateBoardPatch(boardData) {
+  try {
+    const diagram = extractDiagramStructure(boardData || {});
+    const model = getGeminiModel();
+
+    if (!model) {
+      return generateLocalBoardPatch(diagram);
+    }
+
+    const prompt = `
+Given this architecture diagram:
+- Components: ${JSON.stringify(diagram.components)}
+- Connections: ${JSON.stringify(diagram.connections)}
+
+Return strict JSON with keys:
+- addComponents: array of { id, type, kind, label, x, y, width, height, fill, stroke, strokeWidth }
+- addConnections: array of { id, sourceId, targetId, type, label, sourcePortId, targetPortId }
+- highlightIssues: array of { id, type, message, severity, objectIds }
+- cleanupActions: array of strings
+
+Add missing components such as API gateway, auth layer, cache, or database when they are implied by the diagram.
+    `;
+
+    const response = await model.generateContent([
+      'You are a production system architect that returns precise, editable board patches.',
+      prompt
+    ]);
+
+    const patch = parseAIResponse(response.response.text());
+    return {
+      addComponents: patch.addComponents || [],
+      addConnections: patch.addConnections || [],
+      highlightIssues: patch.highlightIssues || [],
+      cleanupActions: patch.cleanupActions || []
+    };
+  } catch (error) {
+    console.error('Error in generateBoardPatch:', error);
+    return generateLocalBoardPatch(extractDiagramStructure(boardData || { objects: [] }));
+  }
+}
+
+/**
+ * Generate a Markdown architecture document from the current board.
+ */
+export async function generateArchitectureDocument(boardData) {
+  const diagram = extractDiagramStructure(boardData || {});
+  const analysis = generateLocalAnalysis(diagram);
+
+  const lines = [
+    `# ${boardData?.name || 'Untitled Board'} Architecture`,
+    '',
+    '## Summary',
+    analysis.summary,
+    '',
+    '## Components'
+  ];
+
+  diagram.components.forEach((component) => {
+    lines.push(`- ${component.name} (${component.kind || component.type})`);
+  });
+
+  lines.push('', '## Connections');
+  diagram.connections.forEach((connection) => {
+    lines.push(`- ${connection.sourceId || connection.fromId} -> ${connection.targetId || connection.toId} [${connection.type || 'relation'}] ${connection.label || ''}`.trim());
+  });
+
+  lines.push('', '## Recommendations');
+  analysis.improvements.forEach((item) => lines.push(`- ${item}`));
+  analysis.scalabilityConcerns.forEach((item) => lines.push(`- ${item}`));
+
+  return {
+    markdown: lines.join('\n'),
+    summary: analysis.summary,
+    components: diagram.components.length,
+    connections: diagram.connections.length
+  };
+}
+
+/**
  * Generate API recommendations based on diagram
  */
 export async function generateApiSuggestions(boardData) {
@@ -177,15 +258,26 @@ Each with 'name' and 'reasoning' fields.
 // ============ Helper Functions ============
 
 function extractDiagramStructure(boardData) {
-  const components = boardData.objects
-    .filter(obj => ['rect', 'circle'].includes(obj.type))
-    .map(obj => ({
+  const objects = boardData.objects || [];
+  const components = objects
+    .filter((obj) => ['rect', 'circle', 'text'].includes(obj.type))
+    .map((obj) => ({
       id: obj.id,
-      name: obj.text || obj.type,
-      type: obj.type
+      name: obj.text || obj.label || obj.kind || obj.type,
+      type: obj.type,
+      kind: inferComponentKind(obj),
+      x: obj.x ?? obj.left ?? 0,
+      y: obj.y ?? obj.top ?? 0,
+      width: obj.width || 0,
+      height: obj.height || 0,
+      metadata: obj.metadata || {}
     }));
 
-  const connections = boardData.connections || [];
+  const connections = (boardData.connections || []).map((connection) => ({
+    ...connection,
+    sourceId: connection.sourceId || connection.fromId || null,
+    targetId: connection.targetId || connection.toId || null
+  }));
 
   return { components, connections };
 }
@@ -450,6 +542,8 @@ function generateLocalAnalysis(diagram) {
   const improvements = [];
   const concerns = [];
 
+  const kinds = new Set(diagram.components.map((component) => component.kind));
+
   if (diagram.components.length > 10) {
     concerns.push('System has many components - consider breaking into modules');
   }
@@ -465,12 +559,125 @@ function generateLocalAnalysis(diagram) {
   improvements.push('Implement caching layer for performance');
   improvements.push('Add monitoring and logging components');
 
+  if (!kinds.has('database')) {
+    concerns.push('No database component detected');
+    improvements.push('Add a database component and connect write paths to it');
+  }
+
+  if (!kinds.has('auth')) {
+    concerns.push('No auth layer detected');
+    improvements.push('Add an auth or identity service');
+  }
+
   return {
     summary: `System with ${diagram.components.length} components and ${diagram.connections.length} connections`,
     patterns,
     improvements,
     scalabilityConcerns: concerns
   };
+}
+
+function generateLocalBoardPatch(diagram) {
+  const components = diagram.components || [];
+  const connections = diagram.connections || [];
+  const componentKinds = new Set(components.map((component) => component.kind));
+  const addComponents = [];
+  const addConnections = [];
+  const highlightIssues = [];
+  const cleanupActions = [];
+
+  if (!componentKinds.has('auth')) {
+    const authId = `auth-${cryptoRandom()}`;
+    const apiId = findComponentIdByKinds(components, ['api', 'service', 'gateway']) || components[0]?.id;
+    addComponents.push(createPatchComponent(authId, 'auth', 'Auth Layer', 60, 60));
+    highlightIssues.push({ id: authId, type: 'missing-auth', message: 'Auth layer was added automatically', severity: 'medium', objectIds: [authId] });
+    if (apiId) {
+      addConnections.push(createPatchConnection(authId, apiId, 'auth', 'JWT validation'));
+    }
+    cleanupActions.push('Attach auth layer to the primary API flow');
+  }
+
+  if (!componentKinds.has('database')) {
+    const dbId = `db-${cryptoRandom()}`;
+    const serviceId = findComponentIdByKinds(components, ['service', 'api', 'gateway']) || components[0]?.id;
+    addComponents.push(createPatchComponent(dbId, 'database', 'Database', 420, 260));
+    highlightIssues.push({ id: dbId, type: 'missing-database', message: 'Database was added automatically', severity: 'high', objectIds: [dbId] });
+    if (serviceId) {
+      addConnections.push(createPatchConnection(serviceId, dbId, 'db', 'Write model'));
+    }
+    cleanupActions.push('Route write paths to the database');
+  }
+
+  const gatewayExists = componentKinds.has('api') || componentKinds.has('gateway');
+  if (!gatewayExists && components.length >= 2) {
+    const gatewayId = `gateway-${cryptoRandom()}`;
+    const firstServiceId = findComponentIdByKinds(components, ['service', 'ui']) || components[0]?.id;
+    const secondServiceId = components.find((component) => component.id !== firstServiceId)?.id || null;
+    addComponents.push(createPatchComponent(gatewayId, 'api', 'API Gateway', 240, 60));
+    highlightIssues.push({ id: gatewayId, type: 'missing-gateway', message: 'API Gateway was added automatically', severity: 'medium', objectIds: [gatewayId] });
+    if (firstServiceId) addConnections.push(createPatchConnection(gatewayId, firstServiceId, 'api', 'Ingress'));
+    if (secondServiceId) addConnections.push(createPatchConnection(firstServiceId, secondServiceId, 'relation', 'Service call'));
+    cleanupActions.push('Place API Gateway in front of external traffic');
+  }
+
+  if (connections.length > 6) {
+    cleanupActions.push('Run hierarchical layout and reroute long connections');
+  }
+
+  return {
+    addComponents,
+    addConnections,
+    highlightIssues,
+    cleanupActions
+  };
+}
+
+function createPatchComponent(id, kind, label, x, y) {
+  return {
+    id,
+    type: 'rect',
+    kind,
+    label,
+    text: label,
+    x,
+    y,
+    width: 180,
+    height: 90,
+    fill: '#ffffff',
+    stroke: '#1f2937',
+    strokeWidth: 2
+  };
+}
+
+function createPatchConnection(sourceId, targetId, type, label) {
+  return {
+    id: `conn-${cryptoRandom()}`,
+    sourceId,
+    targetId,
+    type,
+    label,
+    sourcePortId: null,
+    targetPortId: null
+  };
+}
+
+function inferComponentKind(obj) {
+  const text = `${obj.text || obj.label || ''}`.toLowerCase();
+  if (text.includes('db') || text.includes('database')) return 'database';
+  if (text.includes('auth') || text.includes('login') || text.includes('identity')) return 'auth';
+  if (text.includes('gateway') || text.includes('api')) return 'api';
+  if (text.includes('queue') || text.includes('kafka') || text.includes('rabbit')) return 'queue';
+  if (text.includes('ui') || text.includes('client') || text.includes('frontend')) return 'ui';
+  return obj.type === 'text' ? 'annotation' : 'service';
+}
+
+function findComponentIdByKinds(components, kinds) {
+  const found = components.find((component) => kinds.includes(component.kind));
+  return found?.id || null;
+}
+
+function cryptoRandom() {
+  return Math.random().toString(36).slice(2, 10);
 }
 
 function generateLocalApiSuggestions(components) {

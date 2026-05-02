@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { exportCanvasToPNG } from '../utils/drawingUtils';
+import { downloadTextFile } from '../utils/boardGraph';
 import './ToolBar.css';
 
 /**
@@ -84,6 +85,15 @@ const ToolBar = () => {
     }
 
     exportCanvasToPNG(canvas, `${store.boardName || 'whiteboard'}.png`);
+  };
+
+  const handleCleanUpBoard = () => {
+    store.cleanupBoard();
+  };
+
+  const handleExportMarkdown = () => {
+    const markdown = store.generateArchitectureDocument();
+    downloadTextFile(markdown, `${store.boardName || 'whiteboard'}-architecture.md`, 'text/markdown');
   };
 
   return (
@@ -213,6 +223,20 @@ const ToolBar = () => {
             title="Open AI suggestions"
           >
             AI
+          </button>
+          <button
+            className="action-button"
+            onClick={handleCleanUpBoard}
+            title="Normalize the board layout"
+          >
+            Clean Up Board
+          </button>
+          <button
+            className="action-button"
+            onClick={handleExportMarkdown}
+            title="Export architecture document"
+          >
+            Doc
           </button>
           <button
             className="action-button"

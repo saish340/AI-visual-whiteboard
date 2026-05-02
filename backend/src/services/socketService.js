@@ -79,6 +79,7 @@ export const handleSocketConnection = (socket, io) => {
 
       // Broadcast to all users in room (except sender)
       socket.to(roomKey).emit('draw', { object, userId: socket.id });
+      socket.to(roomKey).emit('board-patch', { patch: { objects: [object] }, userId: socket.id });
 
       // Update activity timestamp
       await Session.updateOne(
@@ -104,6 +105,7 @@ export const handleSocketConnection = (socket, io) => {
         updates,
         userId: socket.id
       });
+      socket.to(roomKey).emit('board-patch', { patch: { objects: [{ id: objectId, ...updates }] }, userId: socket.id });
 
       await Session.updateOne(
         { sessionId: socket.id },
@@ -123,6 +125,7 @@ export const handleSocketConnection = (socket, io) => {
       const roomKey = `board_${boardId}`;
 
       socket.to(roomKey).emit('delete-object', { objectId });
+      socket.to(roomKey).emit('board-patch', { patch: { removeObjectIds: [objectId] }, userId: socket.id });
 
       await Session.updateOne(
         { sessionId: socket.id },
@@ -171,6 +174,42 @@ export const handleSocketConnection = (socket, io) => {
     } catch (error) {
       console.error('❌ Error saving board:', error);
       socket.emit('error', { message: 'Failed to save board' });
+    }
+  });
+
+  /**
+   * Board patch event - Persist and broadcast semantic edits
+   */
+  socket.on('board-patch', async (payload) => {
+    try {
+      const { boardId, patch } = payload;
+      const roomKey = `board_${boardId}`;
+
+      const board = await Board.findOne({ id: boardId });
+      if (!board) {
+        socket.emit('error', { message: 'Board not found' });
+        return;
+      }
+
+      board.data = applyBoardPatchToData(board.data, patch);
+      board.updatedAt = new Date();
+      board.currentVersion = (board.currentVersion || 0) + 1;
+      board.versions.push({
+        versionNumber: board.currentVersion,
+        data: board.data,
+        userId: socket.id,
+        changeDescription: 'Semantic board patch'
+      });
+      await board.save();
+
+      io.to(roomKey).emit('board-patch', {
+        patch,
+        userId: socket.id,
+        version: board.currentVersion
+      });
+    } catch (error) {
+      console.error('❌ Error applying board patch:', error);
+      socket.emit('error', { message: 'Failed to apply board patch' });
     }
   });
 
@@ -296,4 +335,58 @@ function generateUserColor() {
     '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'
   ];
   return colors[Math.floor(Math.random() * colors.length)];
+}
+
+function applyBoardPatchToData(boardData = { objects: [], connections: [] }, patch = {}) {
+  const nextObjects = [...(boardData.objects || [])];
+  const nextConnections = [...(boardData.connections || [])];
+
+  if (Array.isArray(patch.objects)) {
+    patch.objects.forEach((object) => {
+      const index = nextObjects.findIndex((entry) => entry.id === object.id);
+      if (index >= 0) {
+        nextObjects[index] = { ...nextObjects[index], ...object };
+      } else {
+        nextObjects.push(object);
+      }
+    });
+  }
+
+  if (Array.isArray(patch.connections)) {
+    patch.connections.forEach((connection) => {
+      const index = nextConnections.findIndex((entry) => entry.id === connection.id);
+      if (index >= 0) {
+        nextConnections[index] = { ...nextConnections[index], ...connection };
+      } else {
+        nextConnections.push(connection);
+      }
+    });
+  }
+
+  if (Array.isArray(patch.removeObjectIds)) {
+    for (let index = nextObjects.length - 1; index >= 0; index -= 1) {
+      if (patch.removeObjectIds.includes(nextObjects[index].id)) {
+        nextObjects.splice(index, 1);
+      }
+    }
+
+    for (let index = nextConnections.length - 1; index >= 0; index -= 1) {
+      const connection = nextConnections[index];
+      if (
+        patch.removeObjectIds.includes(connection.id) ||
+        patch.removeObjectIds.includes(connection.sourceId) ||
+        patch.removeObjectIds.includes(connection.targetId) ||
+        patch.removeObjectIds.includes(connection.fromId) ||
+        patch.removeObjectIds.includes(connection.toId)
+      ) {
+        nextConnections.splice(index, 1);
+      }
+    }
+  }
+
+  return {
+    ...boardData,
+    objects: nextObjects,
+    connections: nextConnections
+  };
 }

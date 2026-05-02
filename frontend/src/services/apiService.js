@@ -103,6 +103,22 @@ export const aiApi = {
       boardData
     });
     return response.data;
+  },
+
+  // Generate board patch for visual improvements
+  getBoardPatch: async (boardData) => {
+    const response = await api.post('/ai/board-patch', {
+      boardData
+    });
+    return response.data;
+  },
+
+  // Generate architecture document
+  generateArchitectureDocument: async (boardData) => {
+    const response = await api.post('/ai/architecture-document', {
+      boardData
+    });
+    return response.data;
   }
 };
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { emitUpdateObject } from '../services/socketService';
 import { FiX } from 'react-icons/fi';
+import { downloadTextFile, generateArchitectureMarkdown, searchContextEntries } from '../utils/boardGraph';
 import './ContextPanel.css';
 
 /**
@@ -13,10 +14,12 @@ const ContextPanel = ({ objectId }) => {
   const [code, setCode] = useState('');
   const [links, setLinks] = useState([]);
   const [newLink, setNewLink] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Get selected object
   const object = store.boardData.objects.find(obj => obj.id === objectId);
   const metadata = object?.metadata || {};
+  const matchingEntries = searchContextEntries(store.boardData, searchQuery, { elementId: objectId });
 
   useEffect(() => {
     setNotes(metadata.notes || '');
@@ -48,6 +51,19 @@ const ContextPanel = ({ objectId }) => {
     }
   };
 
+  const handleExportMarkdown = () => {
+    const markdown = generateArchitectureMarkdown(store.boardData);
+    downloadTextFile(markdown, `${store.boardName || 'whiteboard'}-architecture.md`, 'text/markdown');
+  };
+
+  const handleExportJSON = () => {
+    downloadTextFile(
+      JSON.stringify(store.boardData, null, 2),
+      `${store.boardName || 'whiteboard'}.json`,
+      'application/json'
+    );
+  };
+
   const removeLink = (index) => {
     setLinks(links.filter((_, i) => i !== index));
   };
@@ -62,6 +78,23 @@ const ContextPanel = ({ objectId }) => {
         >
           <FiX />
         </button>
+      </div>
+
+      <div className="metadata-section">
+        <label>Search Context</label>
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search notes, code, links..."
+        />
+        <div className="links-container">
+          {matchingEntries.map((entry) => (
+            <div key={entry.id} className="link-item">
+              <span>{entry.title}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Object Info */}
@@ -154,6 +187,14 @@ const ContextPanel = ({ objectId }) => {
       {/* Save Button */}
       <button className="save-metadata-button" onClick={handleSaveMetadata}>
         Save Metadata
+      </button>
+
+      <button className="save-metadata-button" onClick={handleExportMarkdown}>
+        Export Architecture Doc
+      </button>
+
+      <button className="save-metadata-button" onClick={handleExportJSON}>
+        Export JSON
       </button>
     </div>
   );

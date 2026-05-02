@@ -1,5 +1,13 @@
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  cleanupBoardData,
+  createConnectionFromArrow,
+  extractSemanticGraph,
+  generateArchitectureMarkdown,
+  normalizeBoardData,
+  searchContextEntries
+} from '../utils/boardGraph';
 
 /**
  * Main Zustand store for application state
@@ -13,9 +21,20 @@ export const useStore = create((set, get) => ({
   // Board state
   boardId: null,
   boardName: 'Untitled Board',
-  boardData: {
+  boardData: normalizeBoardData({
     objects: [],
     connections: []
+  }),
+  semanticGraph: {
+    components: [],
+    connections: [],
+    clusters: [],
+    context: []
+  },
+  contextQuery: '',
+  contextFilter: {
+    tag: '',
+    elementId: ''
   },
 
   // Drawing tools state
@@ -64,7 +83,15 @@ export const useStore = create((set, get) => ({
   },
   setBoardId: (boardId) => set({ boardId }),
   setBoardName: (boardName) => set({ boardName }),
-  setBoardData: (boardData) => set({ boardData }),
+  setBoardData: (boardData) => {
+    const normalized = normalizeBoardData(boardData);
+    set({
+      boardData: normalized,
+      semanticGraph: extractSemanticGraph(normalized)
+    });
+  },
+  setContextQuery: (contextQuery) => set({ contextQuery }),
+  setContextFilter: (contextFilter) => set({ contextFilter }),
   
   setSelectedTool: (tool) => set({ selectedTool: tool }),
   setSelectedColor: (color) => set({ selectedColor: color }),
@@ -102,16 +129,118 @@ export const useStore = create((set, get) => ({
   setIsLoading: (loading) => set({ isLoading: loading }),
   setLastSaveTime: (time) => set({ lastSaveTime: time }),
 
+  refreshSemanticGraph: () => {
+    const state = get();
+    const normalized = normalizeBoardData(state.boardData);
+    set({ semanticGraph: extractSemanticGraph(normalized) });
+  },
+
+  applyBoardPatch: (patch = {}, options = {}) => {
+    const state = get();
+    const normalized = normalizeBoardData(state.boardData);
+    const nextObjects = [...normalized.objects];
+    const nextConnections = [...normalized.connections];
+
+    if (Array.isArray(patch.objects)) {
+      patch.objects.forEach((object) => {
+        const index = nextObjects.findIndex((entry) => entry.id === object.id);
+        const nextObject = { ...(index >= 0 ? nextObjects[index] : {}), ...object };
+        if (index >= 0) {
+          nextObjects[index] = nextObject;
+        } else {
+          nextObjects.push(nextObject);
+        }
+
+        if (nextObject.type === 'arrow') {
+          const connection = createConnectionFromArrow(nextObject, nextObjects);
+          const connectionIndex = nextConnections.findIndex((entry) => entry.id === connection.id);
+          if (connectionIndex >= 0) {
+            nextConnections[connectionIndex] = connection;
+          } else {
+            nextConnections.push(connection);
+          }
+        }
+      });
+    }
+
+    if (Array.isArray(patch.connections)) {
+      patch.connections.forEach((connection) => {
+        const index = nextConnections.findIndex((entry) => entry.id === connection.id);
+        const nextConnection = { ...(index >= 0 ? nextConnections[index] : {}), ...connection };
+        if (index >= 0) {
+          nextConnections[index] = nextConnection;
+        } else {
+          nextConnections.push(nextConnection);
+        }
+      });
+    }
+
+    if (Array.isArray(patch.removeObjectIds)) {
+      patch.removeObjectIds.forEach((objectId) => {
+        const objectIndex = nextObjects.findIndex((entry) => entry.id === objectId);
+        if (objectIndex >= 0) nextObjects.splice(objectIndex, 1);
+      });
+
+      for (let index = nextConnections.length - 1; index >= 0; index -= 1) {
+        const connection = nextConnections[index];
+        if (
+          patch.removeObjectIds.includes(connection.sourceId) ||
+          patch.removeObjectIds.includes(connection.targetId) ||
+          patch.removeObjectIds.includes(connection.id)
+        ) {
+          nextConnections.splice(index, 1);
+        }
+      }
+    }
+
+    const nextBoardData = normalizeBoardData({
+      ...normalized,
+      objects: nextObjects,
+      connections: nextConnections
+    });
+
+    set({
+      boardData: nextBoardData,
+      semanticGraph: extractSemanticGraph(nextBoardData)
+    });
+
+    if (options.pushHistory !== false) {
+      get().pushHistory();
+    }
+
+    return nextBoardData;
+  },
+
   // Canvas manipulation actions
   addObject: (object) => {
     const state = get();
-    const savedObject = { id: object.id || uuidv4(), ...object };
-    const newObjects = [...state.boardData.objects, savedObject];
-    set({
-      boardData: {
-        ...state.boardData,
-        objects: newObjects
+    const savedObject = {
+      ...object,
+      id: object.id || uuidv4(),
+      rev: Number.isFinite(object.rev) ? object.rev : 0,
+      updatedAt: Date.now(),
+      metadata: {
+        notes: '',
+        code: '',
+        links: [],
+        tags: [],
+        ...(object.metadata || {})
       }
+    };
+
+    const boardData = normalizeBoardData({
+      ...state.boardData,
+      objects: [...state.boardData.objects, savedObject]
+    });
+
+    if (savedObject.type === 'arrow') {
+      const connection = createConnectionFromArrow(savedObject, boardData.objects);
+      boardData.connections = [...boardData.connections.filter((entry) => entry.id !== connection.id), connection];
+    }
+
+    set({
+      boardData,
+      semanticGraph: extractSemanticGraph(boardData)
     });
     get().pushHistory();
     return savedObject;
@@ -119,73 +248,122 @@ export const useStore = create((set, get) => ({
 
   updateObject: (objectId, updates) => {
     const state = get();
-    const newObjects = state.boardData.objects.map(obj =>
-      obj.id === objectId ? { ...obj, ...updates } : obj
+    const newObjects = state.boardData.objects.map((obj) =>
+      obj.id === objectId ? { ...obj, ...updates, rev: (obj.rev || 0) + 1, updatedAt: Date.now() } : obj
     );
-    set({
-      boardData: {
-        ...state.boardData,
-        objects: newObjects
+
+    const updatedObject = newObjects.find((obj) => obj.id === objectId);
+    const nextConnections = [...state.boardData.connections];
+
+    if (updatedObject?.type === 'arrow') {
+      const connection = createConnectionFromArrow(updatedObject, newObjects);
+      const index = nextConnections.findIndex((entry) => entry.id === connection.id);
+      if (index >= 0) {
+        nextConnections[index] = connection;
+      } else {
+        nextConnections.push(connection);
       }
+    }
+
+    const nextBoardData = normalizeBoardData({
+      ...state.boardData,
+      objects: newObjects,
+      connections: nextConnections
+    });
+
+    set({
+      boardData: nextBoardData,
+      semanticGraph: extractSemanticGraph(nextBoardData)
     });
     get().pushHistory();
   },
 
   deleteObject: (objectId) => {
     const state = get();
-    const newObjects = state.boardData.objects.filter(obj => obj.id !== objectId);
-    const newConnections = state.boardData.connections.filter(
-      conn => conn.fromId !== objectId && conn.toId !== objectId
+    const newObjects = state.boardData.objects.filter((obj) => obj.id !== objectId);
+    const newConnections = state.boardData.connections.filter((conn) =>
+      conn.id !== objectId && conn.sourceId !== objectId && conn.targetId !== objectId && conn.fromId !== objectId && conn.toId !== objectId
     );
+    const nextBoardData = normalizeBoardData({
+      ...state.boardData,
+      objects: newObjects,
+      connections: newConnections
+    });
     set({
-      boardData: {
-        ...state.boardData,
-        objects: newObjects,
-        connections: newConnections
-      }
+      boardData: nextBoardData,
+      semanticGraph: extractSemanticGraph(nextBoardData)
     });
     get().pushHistory();
   },
 
   addConnection: (fromId, toId, type = 'line', label = '') => {
     const state = get();
-    const newConnections = [
-      ...state.boardData.connections,
-      { id: uuidv4(), fromId, toId, type, label }
-    ];
+    const connection = {
+      id: uuidv4(),
+      sourceId: fromId,
+      targetId: toId,
+      type,
+      label,
+      rev: 0,
+      updatedAt: Date.now()
+    };
+    const nextBoardData = normalizeBoardData({
+      ...state.boardData,
+      connections: [...state.boardData.connections, connection]
+    });
     set({
-      boardData: {
-        ...state.boardData,
-        connections: newConnections
-      }
+      boardData: nextBoardData,
+      semanticGraph: extractSemanticGraph(nextBoardData)
     });
     get().pushHistory();
+    return connection;
   },
 
   deleteConnection: (connectionId) => {
     const state = get();
-    const newConnections = state.boardData.connections.filter(
-      conn => conn.id !== connectionId
-    );
+    const newConnections = state.boardData.connections.filter((conn) => conn.id !== connectionId);
+    const nextBoardData = normalizeBoardData({
+      ...state.boardData,
+      connections: newConnections
+    });
     set({
-      boardData: {
-        ...state.boardData,
-        connections: newConnections
-      }
+      boardData: nextBoardData,
+      semanticGraph: extractSemanticGraph(nextBoardData)
     });
   },
 
   updateMetadata: (objectId, metadata) => {
     const state = get();
-    const newObjects = state.boardData.objects.map(obj =>
-      obj.id === objectId ? { ...obj, metadata: { ...obj.metadata, ...metadata } } : obj
+    const newObjects = state.boardData.objects.map((obj) =>
+      obj.id === objectId ? { ...obj, metadata: { ...obj.metadata, ...metadata }, rev: (obj.rev || 0) + 1, updatedAt: Date.now() } : obj
     );
-    set({
-      boardData: {
-        ...state.boardData,
-        objects: newObjects
-      }
+    const nextBoardData = normalizeBoardData({
+      ...state.boardData,
+      objects: newObjects
     });
+    set({
+      boardData: nextBoardData,
+      semanticGraph: extractSemanticGraph(nextBoardData)
+    });
+    get().pushHistory();
+  },
+
+  cleanupBoard: () => {
+    const state = get();
+    const cleaned = cleanupBoardData(state.boardData);
+    set({
+      boardData: cleaned,
+      semanticGraph: extractSemanticGraph(cleaned)
+    });
+    get().pushHistory();
+    return cleaned;
+  },
+
+  generateArchitectureDocument: () => generateArchitectureMarkdown(get().boardData),
+
+  getFilteredContextEntries: () => {
+    const state = get();
+    return searchContextEntries(state.boardData, state.contextQuery, state.contextFilter);
   },
 
   // History management
@@ -197,7 +375,7 @@ export const useStore = create((set, get) => ({
       newHistory.shift();
     }
     
-    newHistory.push(JSON.parse(JSON.stringify(state.boardData)));
+    newHistory.push(JSON.parse(JSON.stringify(normalizeBoardData(state.boardData))));
     set({
       history: newHistory,
       historyIndex: newHistory.length - 1
@@ -208,8 +386,10 @@ export const useStore = create((set, get) => ({
     const state = get();
     if (state.historyIndex > 0) {
       const newIndex = state.historyIndex - 1;
+      const boardData = normalizeBoardData(JSON.parse(JSON.stringify(state.history[newIndex])));
       set({
-        boardData: JSON.parse(JSON.stringify(state.history[newIndex])),
+        boardData,
+        semanticGraph: extractSemanticGraph(boardData),
         historyIndex: newIndex
       });
     }
@@ -219,8 +399,10 @@ export const useStore = create((set, get) => ({
     const state = get();
     if (state.historyIndex < state.history.length - 1) {
       const newIndex = state.historyIndex + 1;
+      const boardData = normalizeBoardData(JSON.parse(JSON.stringify(state.history[newIndex])));
       set({
-        boardData: JSON.parse(JSON.stringify(state.history[newIndex])),
+        boardData,
+        semanticGraph: extractSemanticGraph(boardData),
         historyIndex: newIndex
       });
     }
@@ -228,8 +410,10 @@ export const useStore = create((set, get) => ({
 
   // Utility actions
   clearBoard: () => {
+    const boardData = normalizeBoardData({ objects: [], connections: [] });
     set({
-      boardData: { objects: [], connections: [] },
+      boardData,
+      semanticGraph: extractSemanticGraph(boardData),
       selectedObject: null,
       history: [],
       historyIndex: -1

@@ -1,5 +1,5 @@
 import express from 'express';
-import { analyzeBoard, suggestLayout, generateApiSuggestions } from '../services/aiService.js';
+import { analyzeBoard, suggestLayout, generateApiSuggestions, generateBoardPatch, generateArchitectureDocument } from '../services/aiService.js';
 
 const router = express.Router();
 
@@ -89,6 +89,66 @@ router.post('/api-suggestions', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to generate API suggestions'
+    });
+  }
+});
+
+/**
+ * Generate a structured patch that can be applied to the canvas
+ * POST /api/ai/board-patch
+ */
+router.post('/board-patch', async (req, res) => {
+  try {
+    const { boardData } = req.body;
+
+    if (!boardData) {
+      return res.status(400).json({
+        success: false,
+        error: 'Board data is required'
+      });
+    }
+
+    const patch = await generateBoardPatch(boardData);
+
+    res.json({
+      success: true,
+      data: patch
+    });
+  } catch (error) {
+    console.error('❌ Board patch error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to generate board patch'
+    });
+  }
+});
+
+/**
+ * Generate a Markdown architecture document
+ * POST /api/ai/architecture-document
+ */
+router.post('/architecture-document', async (req, res) => {
+  try {
+    const { boardData } = req.body;
+
+    if (!boardData) {
+      return res.status(400).json({
+        success: false,
+        error: 'Board data is required'
+      });
+    }
+
+    const document = await generateArchitectureDocument(boardData);
+
+    res.json({
+      success: true,
+      data: document
+    });
+  } catch (error) {
+    console.error('❌ Architecture document error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to generate architecture document'
     });
   }
 });

@@ -3,6 +3,7 @@
  */
 import { io } from 'socket.io-client';
 import { useStore } from '../store/useStore';
+import { normalizeBoardData } from '../utils/boardGraph';
 
 let socket = null;
 
@@ -26,31 +27,40 @@ export const initializeSocket = (userId, boardId, userName) => {
 
   // Receive full board state
   socket.on('board-loaded', (data) => {
+    const boardData = normalizeBoardData(data.data);
     useStore.setState({
       boardId: data.id,
       boardName: data.name,
-      boardData: data.data,
-      history: [JSON.parse(JSON.stringify(data.data))],
+      boardData,
+      semanticGraph: useStore.getState().semanticGraph,
+      history: [JSON.parse(JSON.stringify(boardData))],
       historyIndex: 0
     });
+    useStore.getState().refreshSemanticGraph();
   });
 
   // Handle draw events from other users
   socket.on('draw', (data) => {
     const { object } = data;
-    useStore.getState().addObject(object);
+    useStore.getState().applyBoardPatch({ objects: [object] }, { pushHistory: false });
   });
 
   // Handle object updates
   socket.on('update-object', (data) => {
     const { objectId, updates } = data;
-    useStore.getState().updateObject(objectId, updates);
+    useStore.getState().applyBoardPatch({ objects: [{ id: objectId, ...updates }] }, { pushHistory: false });
   });
 
   // Handle object deletion
   socket.on('delete-object', (data) => {
     const { objectId } = data;
-    useStore.getState().deleteObject(objectId);
+    useStore.getState().applyBoardPatch({ removeObjectIds: [objectId] }, { pushHistory: false });
+  });
+
+  socket.on('board-patch', (data) => {
+    const { patch } = data;
+    if (!patch) return;
+    useStore.getState().applyBoardPatch(patch, { pushHistory: false });
   });
 
   // Handle board saved
@@ -105,6 +115,12 @@ export const getSocket = () => socket;
 export const emitDraw = (boardId, object) => {
   if (socket) {
     socket.emit('draw', { boardId, object });
+  }
+};
+
+export const emitBoardPatch = (boardId, patch) => {
+  if (socket) {
+    socket.emit('board-patch', { boardId, patch });
   }
 };
 
