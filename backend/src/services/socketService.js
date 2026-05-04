@@ -48,6 +48,7 @@ export const handleSocketConnection = (socket, io) => {
       socket.emit('board-loaded', {
         id: board.id,
         name: board.name,
+        isPublic: board.isPublic,
         data: board.data,
         version: board.currentVersion
       });

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { boardApi } from '../services/apiService';
+import { BOARD_TEMPLATES, createBoardFromTemplate } from '../utils/boardFeatures';
 import './DashboardPage.css';
 
 /**
@@ -10,49 +11,84 @@ import './DashboardPage.css';
 const DashboardPage = ({ isDarkMode, toggleDarkMode }) => {
   const navigate = useNavigate();
   const store = useStore();
+  const userId = store.userId;
+  const setError = store.setError;
   const [boards, setBoards] = useState([]);
+  const [publicBoards, setPublicBoards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [formData, setFormData] = useState({ name: '', description: '', templateId: 'blank' });
 
   // Load boards on component mount
-  useEffect(() => {
-    loadBoards();
+  const loadPublicBoards = useCallback(async () => {
+    try {
+      const response = await boardApi.getPublic();
+      if (response.success) {
+        setPublicBoards(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading public boards:', error);
+    }
   }, []);
 
-  const loadBoards = async () => {
+  const loadBoards = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await boardApi.getByUser(store.userId);
+      const response = await boardApi.getByUser(userId);
       if (response.success) {
         setBoards(response.data);
       }
     } catch (error) {
       console.error('Error loading boards:', error);
-      store.setError(null);
+      setError(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, setError]);
+
+  useEffect(() => {
+    loadBoards();
+    loadPublicBoards();
+  }, [loadBoards, loadPublicBoards]);
 
   const handleCreateBoard = async (e) => {
     e.preventDefault();
     try {
       const response = await boardApi.create(store.userId, formData.name, formData.description);
       if (response.success) {
-        setBoards([...boards, response.data]);
-        setFormData({ name: '', description: '' });
+        const selectedTemplate = createBoardFromTemplate(formData.templateId, formData.name || response.data.name);
+        if (formData.templateId !== 'blank') {
+          const templateData = {
+            objects: selectedTemplate.objects,
+            connections: selectedTemplate.connections
+          };
+          await boardApi.update(response.data.id, formData.name || response.data.name, formData.description, templateData);
+        }
+
+        const createdBoard = formData.templateId === 'blank'
+          ? response.data
+          : {
+              ...response.data,
+              data: {
+                objects: selectedTemplate.objects,
+                connections: selectedTemplate.connections
+              }
+            };
+
+        setBoards([...boards, createdBoard]);
+        setFormData({ name: '', description: '', templateId: 'blank' });
         setShowCreateForm(false);
         navigate(`/board/${response.data.id}`);
       }
     } catch (error) {
       console.error('Error creating board:', error);
       const localBoardId = `local-${Date.now()}`;
+      const templateBoard = createBoardFromTemplate(formData.templateId, formData.name || 'Local Draft Board');
       store.setBoardId(localBoardId);
-      store.setBoardName(formData.name || 'Local Draft Board');
-      store.setBoardData({ objects: [], connections: [] });
+      store.setBoardName(formData.name || templateBoard.name || 'Local Draft Board');
+      store.setBoardData(templateBoard);
       store.setError(null);
-      setFormData({ name: '', description: '' });
+      setFormData({ name: '', description: '', templateId: 'blank' });
       setShowCreateForm(false);
       navigate(`/board/${localBoardId}`);
     }
@@ -63,6 +99,7 @@ const DashboardPage = ({ isDarkMode, toggleDarkMode }) => {
       try {
         await boardApi.delete(boardId, store.userId);
         setBoards(boards.filter(b => b.id !== boardId));
+        setPublicBoards(publicBoards.filter(b => b.id !== boardId));
       } catch (error) {
         console.error('Error deleting board:', error);
         store.setError('Failed to delete board');
@@ -116,13 +153,24 @@ const DashboardPage = ({ isDarkMode, toggleDarkMode }) => {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
               />
+              <select
+                value={formData.templateId}
+                onChange={(e) => setFormData({ ...formData, templateId: e.target.value })}
+                className="template-select"
+              >
+                {BOARD_TEMPLATES.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}
+                  </option>
+                ))}
+              </select>
               <div className="form-buttons">
                 <button type="submit">Create</button>
                 <button
                   type="button"
                   onClick={() => {
                     setShowCreateForm(false);
-                    setFormData({ name: '', description: '' });
+                    setFormData({ name: '', description: '', templateId: 'blank' });
                   }}
                   className="cancel-button"
                 >
@@ -186,6 +234,52 @@ const DashboardPage = ({ isDarkMode, toggleDarkMode }) => {
                         title="Delete board"
                       >
                         🗑️
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="boards-section public-section">
+          <h2>Public Boards ({publicBoards.length})</h2>
+
+          {publicBoards.length === 0 ? (
+            <div className="empty-state">
+              <p>No public boards yet.</p>
+            </div>
+          ) : (
+            <div className="boards-grid">
+              {publicBoards.map((board) => (
+                <div key={board.id} className="board-card public-board-card">
+                  <div className="board-header">
+                    <h3>{board.name}</h3>
+                    <div className="board-meta">
+                      <span className="object-count">
+                        {board.data?.objects?.length || 0} objects
+                      </span>
+                      <span className="collaboration-count">
+                        {board.collaborators?.length || 1} users
+                      </span>
+                    </div>
+                  </div>
+                  <p className="board-description">
+                    {board.description || 'No description'}
+                  </p>
+                  <div className="board-footer">
+                    <div className="board-dates">
+                      <small>
+                        Updated: {new Date(board.updatedAt).toLocaleDateString()}
+                      </small>
+                    </div>
+                    <div className="board-actions">
+                      <button
+                        className="open-button"
+                        onClick={() => navigate(`/board/${board.id}`)}
+                      >
+                        Open
                       </button>
                     </div>
                   </div>

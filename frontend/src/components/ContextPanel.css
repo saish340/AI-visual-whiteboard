@@ -211,6 +211,46 @@
   background-color: #0052a3;
 }
 
+.comment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.comment-item {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background-color: #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.context-panel.dark .comment-item {
+  background-color: #4a4a4a;
+}
+
+.comment-item strong {
+  font-size: 12px;
+}
+
+.comment-item span {
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.comment-item small,
+.helper-text {
+  font-size: 11px;
+  color: #666;
+}
+
+.context-panel.dark .comment-item small,
+.context-panel.dark .helper-text {
+  color: #aaa;
+}
+
 /* Save Button */
 .save-metadata-button {
   padding: 12px;

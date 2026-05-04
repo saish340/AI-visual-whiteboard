@@ -8,6 +8,9 @@ import {
   normalizeBoardData,
   searchContextEntries
 } from '../utils/boardGraph';
+import {
+  mergeTemplateIntoBoardData
+} from '../utils/boardFeatures';
 
 /**
  * Main Zustand store for application state
@@ -17,10 +20,12 @@ export const useStore = create((set, get) => ({
   // User state
   userId: localStorage.getItem('userId') || uuidv4(),
   userName: localStorage.getItem('userName') || `User-${Math.random().toString(36).substr(2, 5)}`,
+  isDarkMode: JSON.parse(localStorage.getItem('darkMode') || 'false'),
   
   // Board state
   boardId: null,
   boardName: 'Untitled Board',
+  boardIsPublic: false,
   boardData: normalizeBoardData({
     objects: [],
     connections: []
@@ -58,6 +63,7 @@ export const useStore = create((set, get) => ({
   // UI state
   showToolbar: true,
   showSidebar: true,
+  showBoardHub: false,
   selectedObject: null,
   isDrawing: false,
   showAISuggestions: false,
@@ -66,6 +72,7 @@ export const useStore = create((set, get) => ({
   // Collaboration state
   activeUsers: [],
   cursorPositions: {},
+  activityFeed: [],
 
   // Loading & status
   isLoading: false,
@@ -81,8 +88,13 @@ export const useStore = create((set, get) => ({
     localStorage.setItem('userName', userName);
     set({ userName });
   },
+  setDarkMode: (isDarkMode) => {
+    localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
+    set({ isDarkMode });
+  },
   setBoardId: (boardId) => set({ boardId }),
   setBoardName: (boardName) => set({ boardName }),
+  setBoardIsPublic: (boardIsPublic) => set({ boardIsPublic: !!boardIsPublic }),
   setBoardData: (boardData) => {
     const normalized = normalizeBoardData(boardData);
     set({
@@ -90,6 +102,7 @@ export const useStore = create((set, get) => ({
       semanticGraph: extractSemanticGraph(normalized)
     });
   },
+  setShowBoardHub: (showBoardHub) => set({ showBoardHub: !!showBoardHub }),
   setContextQuery: (contextQuery) => set({ contextQuery }),
   setContextFilter: (contextFilter) => set({ contextFilter }),
   
@@ -128,6 +141,17 @@ export const useStore = create((set, get) => ({
   setError: (error) => set({ error }),
   setIsLoading: (loading) => set({ isLoading: loading }),
   setLastSaveTime: (time) => set({ lastSaveTime: time }),
+  logActivity: (entry) => {
+    const nextEntry = {
+      id: uuidv4(),
+      timestamp: Date.now(),
+      ...entry
+    };
+    set((state) => ({
+      activityFeed: [nextEntry, ...state.activityFeed].slice(0, 25)
+    }));
+    return nextEntry;
+  },
 
   refreshSemanticGraph: () => {
     const state = get();
@@ -243,6 +267,11 @@ export const useStore = create((set, get) => ({
       semanticGraph: extractSemanticGraph(boardData)
     });
     get().pushHistory();
+    get().logActivity({
+      type: 'create',
+      title: 'Added object',
+      detail: savedObject.text || savedObject.kind || savedObject.type
+    });
     return savedObject;
   },
 
@@ -276,6 +305,11 @@ export const useStore = create((set, get) => ({
       semanticGraph: extractSemanticGraph(nextBoardData)
     });
     get().pushHistory();
+    get().logActivity({
+      type: 'update',
+      title: 'Updated object',
+      detail: updatedObject?.text || updatedObject?.kind || objectId
+    });
   },
 
   deleteObject: (objectId) => {
@@ -294,6 +328,11 @@ export const useStore = create((set, get) => ({
       semanticGraph: extractSemanticGraph(nextBoardData)
     });
     get().pushHistory();
+    get().logActivity({
+      type: 'delete',
+      title: 'Deleted object',
+      detail: objectId
+    });
   },
 
   addConnection: (fromId, toId, type = 'line', label = '') => {
@@ -316,6 +355,11 @@ export const useStore = create((set, get) => ({
       semanticGraph: extractSemanticGraph(nextBoardData)
     });
     get().pushHistory();
+    get().logActivity({
+      type: 'create',
+      title: 'Added connection',
+      detail: `${fromId} -> ${toId}`
+    });
     return connection;
   },
 
@@ -346,6 +390,86 @@ export const useStore = create((set, get) => ({
       semanticGraph: extractSemanticGraph(nextBoardData)
     });
     get().pushHistory();
+    get().logActivity({
+      type: 'comment',
+      title: 'Updated metadata',
+      detail: objectId
+    });
+  },
+
+  addComment: (objectId, comment) => {
+    const state = get();
+    const newObjects = state.boardData.objects.map((obj) => {
+      if (obj.id !== objectId) return obj;
+
+      const comments = Array.isArray(obj.metadata?.comments) ? obj.metadata.comments : [];
+      return {
+        ...obj,
+        metadata: {
+          ...obj.metadata,
+          comments: [...comments, {
+            id: uuidv4(),
+            userId: comment.userId,
+            userName: comment.userName,
+            text: comment.text,
+            createdAt: comment.createdAt || new Date().toISOString()
+          }]
+        },
+        rev: (obj.rev || 0) + 1,
+        updatedAt: Date.now()
+      };
+    });
+
+    const nextBoardData = normalizeBoardData({
+      ...state.boardData,
+      objects: newObjects
+    });
+
+    set({
+      boardData: nextBoardData,
+      semanticGraph: extractSemanticGraph(nextBoardData)
+    });
+    get().pushHistory();
+    get().logActivity({
+      type: 'comment',
+      title: 'Added comment',
+      detail: comment.text
+    });
+  },
+
+  insertTemplate: (templateId) => {
+    const state = get();
+    const templatePatch = mergeTemplateIntoBoardData(state.boardData, templateId);
+    const nextBoardData = normalizeBoardData(templatePatch);
+
+    set({
+      boardData: nextBoardData,
+      semanticGraph: extractSemanticGraph(nextBoardData)
+    });
+    get().pushHistory();
+    get().logActivity({
+      type: 'template',
+      title: 'Inserted template',
+      detail: templateId
+    });
+
+    return nextBoardData;
+  },
+
+  importBoardData: (boardData, boardName = null) => {
+    const normalized = normalizeBoardData(boardData);
+    set({
+      boardData: normalized,
+      boardName: boardName || boardData.name || 'Imported Board',
+      semanticGraph: extractSemanticGraph(normalized)
+    });
+    get().pushHistory();
+    get().logActivity({
+      type: 'import',
+      title: 'Imported board',
+      detail: boardName || boardData.name || 'Imported board'
+    });
+    return normalized;
   },
 
   cleanupBoard: () => {
@@ -356,6 +480,11 @@ export const useStore = create((set, get) => ({
       semanticGraph: extractSemanticGraph(cleaned)
     });
     get().pushHistory();
+    get().logActivity({
+      type: 'layout',
+      title: 'Cleaned up board layout',
+      detail: `${cleaned.objects.length} objects`
+    });
     return cleaned;
   },
 
@@ -416,7 +545,8 @@ export const useStore = create((set, get) => ({
       semanticGraph: extractSemanticGraph(boardData),
       selectedObject: null,
       history: [],
-      historyIndex: -1
+      historyIndex: -1,
+      activityFeed: []
     });
   },
 

@@ -226,6 +226,13 @@ const ToolBar = () => {
           </button>
           <button
             className="action-button"
+            onClick={() => store.setShowBoardHub(true)}
+            title="Open board hub"
+          >
+            Hub
+          </button>
+          <button
+            className="action-button"
             onClick={handleCleanUpBoard}
             title="Normalize the board layout"
           >

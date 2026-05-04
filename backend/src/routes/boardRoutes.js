@@ -11,7 +11,7 @@ const router = express.Router();
  */
 router.post('/create', async (req, res) => {
   try {
-    const { name, description, userId } = req.body;
+    const { name, description, userId, isPublic = false } = req.body;
 
     if (!userId) {
       throw new APIError('User ID is required', 400);
@@ -21,6 +21,7 @@ router.post('/create', async (req, res) => {
       id: uuidv4(),
       name: name || 'Untitled Board',
       description,
+      isPublic,
       owner: userId,
       data: {
         objects: [],
@@ -72,6 +73,26 @@ router.get('/user/:userId', async (req, res) => {
 });
 
 /**
+ * Get all public boards
+ * GET /api/boards/public
+ */
+router.get('/public', async (_req, res) => {
+  try {
+    const boards = await Board.find({ isPublic: true }).sort({ updatedAt: -1 });
+
+    res.json({
+      success: true,
+      data: boards
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
  * Get board by ID
  * GET /api/boards/:id
  */
@@ -101,7 +122,7 @@ router.get('/:id', async (req, res) => {
  */
 router.put('/:id', async (req, res) => {
   try {
-    const { name, description, data } = req.body;
+    const { name, description, data, isPublic } = req.body;
 
     const board = await Board.findOneAndUpdate(
       { id: req.params.id },
@@ -109,6 +130,7 @@ router.put('/:id', async (req, res) => {
         ...(name && { name }),
         ...(description && { description }),
         ...(data && { data }),
+        ...(typeof isPublic === 'boolean' && { isPublic }),
         updatedAt: new Date()
       },
       { new: true }
@@ -121,6 +143,43 @@ router.put('/:id', async (req, res) => {
     res.json({
       success: true,
       data: board
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Update board visibility
+ * PUT /api/boards/:id/visibility
+ */
+router.put('/:id/visibility', async (req, res) => {
+  try {
+    const { userId, isPublic } = req.body;
+
+    const board = await Board.findOne({ id: req.params.id });
+
+    if (!board) {
+      throw new APIError('Board not found', 404);
+    }
+
+    if (board.owner !== userId) {
+      throw new APIError('Only board owner can change visibility', 403);
+    }
+
+    board.isPublic = !!isPublic;
+    board.updatedAt = new Date();
+    await board.save();
+
+    res.json({
+      success: true,
+      data: {
+        id: board.id,
+        isPublic: board.isPublic
+      }
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({

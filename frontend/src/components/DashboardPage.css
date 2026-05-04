@@ -105,7 +105,8 @@
 }
 
 .create-form input[type="text"],
-.create-form textarea {
+.create-form textarea,
+.template-select {
   width: 100%;
   margin-bottom: 16px;
   padding: 10px 12px;
@@ -115,10 +116,23 @@
 }
 
 .dashboard-page.dark .create-form input[type="text"],
-.dashboard-page.dark .create-form textarea {
+.dashboard-page.dark .create-form textarea,
+.dashboard-page.dark .template-select {
   background-color: #3a3a3a;
   border-color: #555;
   color: #fff;
+}
+
+.template-select {
+  background-color: #ffffff;
+}
+
+.public-section {
+  margin-top: 36px;
+}
+
+.public-board-card {
+  border-color: rgba(37, 99, 235, 0.25);
 }
 
 .create-form textarea {

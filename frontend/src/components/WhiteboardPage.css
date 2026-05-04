@@ -75,6 +75,20 @@
   gap: 20px;
 }
 
+.board-hub-toggle {
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: #ffffff;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.25);
+}
+
+.board-hub-toggle:hover {
+  filter: brightness(1.06);
+}
+
 .dark-mode-toggle {
   padding: 8px 12px;
   background-color: #e0e0e0;

@@ -31,10 +31,12 @@ export const initializeSocket = (userId, boardId, userName) => {
     useStore.setState({
       boardId: data.id,
       boardName: data.name,
+      boardIsPublic: !!data.isPublic,
       boardData,
       semanticGraph: useStore.getState().semanticGraph,
       history: [JSON.parse(JSON.stringify(boardData))],
-      historyIndex: 0
+      historyIndex: 0,
+      activityFeed: []
     });
     useStore.getState().refreshSemanticGraph();
   });

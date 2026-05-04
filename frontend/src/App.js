@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useStore } from './store/useStore';
 import './App.css';
 import WhiteboardPage from './components/WhiteboardPage';
 import DashboardPage from './components/DashboardPage';
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const setStoreDarkMode = useStore((state) => state.setDarkMode);
 
   useEffect(() => {
     // Check saved preference
@@ -23,7 +25,8 @@ function App() {
       document.documentElement.classList.remove('dark');
     }
     localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
-  }, [isDarkMode]);
+    setStoreDarkMode(isDarkMode);
+  }, [isDarkMode, setStoreDarkMode]);
 
   return (
     <Router>

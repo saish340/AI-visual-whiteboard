@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { useStore } from '../store/useStore';
 import { emitUpdateObject } from '../services/socketService';
 import { FiX } from 'react-icons/fi';
@@ -13,7 +14,9 @@ const ContextPanel = ({ objectId }) => {
   const [notes, setNotes] = useState('');
   const [code, setCode] = useState('');
   const [links, setLinks] = useState([]);
+  const [comments, setComments] = useState([]);
   const [newLink, setNewLink] = useState('');
+  const [newComment, setNewComment] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Get selected object
@@ -25,7 +28,8 @@ const ContextPanel = ({ objectId }) => {
     setNotes(metadata.notes || '');
     setCode(metadata.code || '');
     setLinks(metadata.links || []);
-  }, [objectId, metadata.notes, metadata.code, metadata.links]);
+    setComments(metadata.comments || []);
+  }, [objectId, metadata.notes, metadata.code, metadata.links, metadata.comments]);
 
   if (!object) {
     return null;
@@ -35,7 +39,8 @@ const ContextPanel = ({ objectId }) => {
     const nextMetadata = {
       notes,
       code,
-      links
+      links,
+      comments
     };
 
     store.updateMetadata(objectId, nextMetadata);
@@ -48,6 +53,34 @@ const ContextPanel = ({ objectId }) => {
     if (newLink.trim()) {
       setLinks([...links, newLink]);
       setNewLink('');
+    }
+  };
+
+  const addComment = () => {
+    if (!newComment.trim()) {
+      return;
+    }
+
+    const nextComment = {
+      id: uuidv4(),
+      userId: store.userId,
+      userName: store.userName,
+      text: newComment.trim(),
+      createdAt: new Date().toISOString()
+    };
+    const nextComments = [...comments, nextComment];
+
+    setComments(nextComments);
+    setNewComment('');
+    store.addComment(objectId, nextComment);
+
+    if (store.boardId) {
+      emitUpdateObject(store.boardId, objectId, {
+        metadata: {
+          ...metadata,
+          comments: nextComments
+        }
+      });
     }
   };
 
@@ -182,6 +215,32 @@ const ContextPanel = ({ objectId }) => {
           />
           <button onClick={addLink}>Add Link</button>
         </div>
+      </div>
+
+      <div className="metadata-section">
+        <label>Comments</label>
+        <div className="comment-list">
+          {comments.length === 0 ? (
+            <p className="helper-text">Add a comment to capture decisions or questions.</p>
+          ) : (
+            comments.map((comment) => (
+              <div key={comment.id} className="comment-item">
+                <strong>{comment.userName || 'User'}</strong>
+                <span>{comment.text}</span>
+                <small>{new Date(comment.createdAt || Date.now()).toLocaleString()}</small>
+              </div>
+            ))
+          )}
+        </div>
+        <textarea
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          placeholder="Write a comment..."
+          rows={3}
+        />
+        <button className="save-metadata-button" onClick={addComment} type="button">
+          Add Comment
+        </button>
       </div>
 
       {/* Save Button */}

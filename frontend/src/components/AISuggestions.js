@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useStore } from '../store/useStore';
 import { aiApi } from '../services/apiService';
 import { FiX, FiRefreshCw } from 'react-icons/fi';
@@ -14,7 +14,7 @@ const AISuggestions = () => {
   const [activeTab, setActiveTab] = useState('layout');
 
   // Fetch suggestions
-  const fetchSuggestions = async () => {
+  const fetchSuggestions = useCallback(async () => {
     if (store.boardData.objects.length === 0) {
       store.setError('Add elements to board first');
       return;
@@ -43,12 +43,12 @@ const AISuggestions = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, store.boardData, store.userId, store.setError]);
 
   // Auto-fetch on component mount
   useEffect(() => {
     fetchSuggestions();
-  }, [activeTab]);
+  }, [fetchSuggestions]);
 
   // Apply layout suggestion
   const applyLayoutSuggestion = (suggestion) => {

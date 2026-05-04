@@ -57,7 +57,17 @@ const boardSchema = new mongoose.Schema({
         notes: String,
         code: String,
         links: [String],
-        tags: [String]
+        tags: [String],
+        comments: [{
+          id: String,
+          userId: String,
+          userName: String,
+          text: String,
+          createdAt: {
+            type: Date,
+            default: Date.now
+          }
+        }]
       }
     }],
     connections: [{

@@ -303,15 +303,30 @@ const inferConnectionType = (connection, source, target) => {
 
 const extractContextEntries = (objects) => {
   return objects
-    .filter((object) => object.metadata && (object.metadata.notes || object.metadata.code || (object.metadata.links || []).length > 0))
+    .filter((object) => {
+      const commentCount = Array.isArray(object.metadata?.comments) ? object.metadata.comments.length : 0;
+      return object.metadata && (
+        object.metadata.notes ||
+        object.metadata.code ||
+        (object.metadata.links || []).length > 0 ||
+        commentCount > 0
+      );
+    })
     .map((object) => ({
       id: `${object.id}:context`,
       elementId: object.id,
       elementType: object.type,
       title: object.text || object.kind || object.type,
-      content: [object.metadata.notes, object.metadata.code].filter(Boolean).join('\n\n'),
+      content: [
+        object.metadata.notes,
+        object.metadata.code,
+        Array.isArray(object.metadata.comments)
+          ? object.metadata.comments.map((comment) => `${comment.userName || 'User'}: ${comment.text}`).join('\n')
+          : ''
+      ].filter(Boolean).join('\n\n'),
       links: object.metadata.links || [],
-      tags: object.metadata.tags || []
+      tags: object.metadata.tags || [],
+      comments: object.metadata.comments || []
     }));
 };
 

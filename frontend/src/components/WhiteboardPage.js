@@ -8,6 +8,7 @@ import ToolBar from './ToolBar';
 import AISuggestions from './AISuggestions';
 import ContextPanel from './ContextPanel';
 import ActiveUsers from './ActiveUsers';
+import BoardHub from './BoardHub';
 import './WhiteboardPage.css';
 
 /**
@@ -17,8 +18,18 @@ const WhiteboardPage = ({ isDarkMode, toggleDarkMode }) => {
   const { boardId } = useParams();
   const navigate = useNavigate();
   const store = useStore();
+  const {
+    userId,
+    userName,
+    boardData,
+    setBoardId,
+    setBoardName,
+    setBoardIsPublic,
+    setBoardData,
+    setError,
+    setLastSaveTime
+  } = store;
   const [isLoading, setIsLoading] = useState(true);
-  const [autoSaveInterval, setAutoSaveInterval] = useState(null);
 
   // Load board and initialize WebSocket
   useEffect(() => {
@@ -30,22 +41,23 @@ const WhiteboardPage = ({ isDarkMode, toggleDarkMode }) => {
         if (boardId) {
           const response = await boardApi.getById(boardId);
           if (response.success) {
-            store.setBoardId(response.data.id);
-            store.setBoardName(response.data.name);
-            store.setBoardData(response.data.data);
+            setBoardId(response.data.id);
+            setBoardName(response.data.name);
+            setBoardIsPublic(response.data.isPublic);
+            setBoardData(response.data.data);
           }
         }
 
         // Initialize WebSocket
-        initializeSocket(store.userId, boardId, store.userName);
+        initializeSocket(userId, boardId, userName);
 
         setIsLoading(false);
       } catch (error) {
         console.error('Error loading board:', error);
-        store.setBoardId(boardId || `local-${Date.now()}`);
-        store.setBoardName('Local Draft Board');
-        store.setBoardData({ objects: [], connections: [] });
-        store.setError(null);
+        setBoardId(boardId || `local-${Date.now()}`);
+        setBoardName('Local Draft Board');
+        setBoardData({ objects: [], connections: [] });
+        setError(null);
         setIsLoading(false);
       }
     };
@@ -55,19 +67,19 @@ const WhiteboardPage = ({ isDarkMode, toggleDarkMode }) => {
     return () => {
       disconnectSocket();
     };
-  }, [boardId, store.userId, store.userName]);
+  }, [boardId, userId, userName, setBoardId, setBoardName, setBoardIsPublic, setBoardData, setError]);
 
   // Set up auto-save
   useEffect(() => {
     if (!boardId) return;
 
     const interval = setInterval(() => {
-      emitSaveBoard(boardId, store.boardData, store.userId);
-      store.setLastSaveTime(new Date());
+      emitSaveBoard(boardId, boardData, userId);
+      setLastSaveTime(new Date());
     }, 30000); // Auto-save every 30 seconds
 
     return () => clearInterval(interval);
-  }, [boardId, store.boardData, store.userId]);
+  }, [boardId, boardData, userId, setLastSaveTime]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -75,8 +87,8 @@ const WhiteboardPage = ({ isDarkMode, toggleDarkMode }) => {
       // Ctrl/Cmd + S to save
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        emitSaveBoard(boardId, store.boardData, store.userId);
-        store.setLastSaveTime(new Date());
+        emitSaveBoard(boardId, boardData, userId);
+        setLastSaveTime(new Date());
       }
 
       // Ctrl/Cmd + E to export
@@ -88,7 +100,7 @@ const WhiteboardPage = ({ isDarkMode, toggleDarkMode }) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [boardId, store.boardData, store.userId]);
+  }, [boardId, boardData, userId, setLastSaveTime]);
 
   if (isLoading) {
     return (
@@ -110,6 +122,13 @@ const WhiteboardPage = ({ isDarkMode, toggleDarkMode }) => {
         </div>
         <div className="header-right">
           <ActiveUsers users={store.activeUsers} />
+          <button
+            className="board-hub-toggle"
+            onClick={() => store.setShowBoardHub(true)}
+            title="Open board hub"
+          >
+            Board Hub
+          </button>
           <button
             className="dark-mode-toggle"
             onClick={toggleDarkMode}
@@ -157,6 +176,8 @@ const WhiteboardPage = ({ isDarkMode, toggleDarkMode }) => {
           </span>
         </div>
       </footer>
+
+      {store.showBoardHub && <BoardHub />}
     </div>
   );
 };

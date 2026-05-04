@@ -22,6 +22,12 @@ export const boardApi = {
     return response.data;
   },
 
+  // Get public boards
+  getPublic: async () => {
+    const response = await api.get('/boards/public');
+    return response.data;
+  },
+
   // Get board by ID
   getById: async (boardId) => {
     const response = await api.get(`/boards/${boardId}`);
@@ -35,11 +41,21 @@ export const boardApi = {
   },
 
   // Update board
-  update: async (boardId, name, description, data) => {
+  update: async (boardId, name, description, data, isPublic) => {
     const response = await api.put(`/boards/${boardId}`, {
       name,
       description,
-      data
+      data,
+      isPublic
+    });
+    return response.data;
+  },
+
+  // Update board visibility
+  setVisibility: async (boardId, userId, isPublic) => {
+    const response = await api.put(`/boards/${boardId}/visibility`, {
+      userId,
+      isPublic
     });
     return response.data;
   },
